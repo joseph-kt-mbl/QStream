@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import authRoutes from "./routes/auth.route.js";
+import videoRoutes from "./routes/video.route.js";
 import requestLogger from "./middleware/requestLogger.js";
 
 const app = express();
@@ -22,6 +23,8 @@ app.use(
 app.use(requestLogger);
 
 app.use("/api/auth", authRoutes);
+app.use("/api/videos", videoRoutes);
+
 
 app.listen(PORT, () => {
   console.log("server is running on PORT:" + PORT);
