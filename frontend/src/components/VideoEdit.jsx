@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { X, Upload, Save } from 'lucide-react';
 import useVideoStore from '../store/useVideoStore';
-import useAuthStore from '../store/useAuthStore';
+import {useAuthStore} from '../store/useAuthStore';
 
 const VideoEdit = () => {
   const { id } = useParams();
@@ -84,7 +84,7 @@ const VideoEdit = () => {
         thumbnailFile: thumbnail
       };
 
-      await updateVideo(videoData, user.token);
+      await updateVideo(id,videoData);
       navigate(`/videos/${id}`);
     } catch (err) {
       console.error('Video update failed:', err);

@@ -43,7 +43,7 @@ const VideoDetail = () => {
 
   const handleDeleteVideo = async () => {
     try {
-      await deleteVideo(currentVideo.id, authUser.token);
+      await deleteVideo(currentVideo.id);
       // Redirect to videos page after deletion
       window.location.href = '/videos';
     } catch (err) {
@@ -90,11 +90,7 @@ const VideoDetail = () => {
     );
   }
 
-  const isOwner = authUser?.id === currentVideo.user.id;
-  
-  console.log("isAuthenticated => ", isAuthenticated)
-  console.log("user id => ", authUser.id)
-  console.log("currentVideo user id => ", currentVideo.user.id)
+  const isOwner = authUser?.id === currentVideo?.user?.id;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">

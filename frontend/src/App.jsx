@@ -12,6 +12,7 @@ import { Toaster } from "react-hot-toast";
 import VideoUpload from "./components/VideoUpload";
 import VideoList from "./components/VideoList";
 import VideoDetail from "./components/VideoDetail";
+import VideoEdit from "./components/VideoEdit";
 
 const App = () => {
   const { authUser, checkAuth, isCheckingAuth, onlineUsers } = useAuthStore();
@@ -44,6 +45,8 @@ const App = () => {
         <Route path="/upload-video" element={authUser ? <VideoUpload /> : <Navigate to="/login" />} />
         <Route path="/videos" element={authUser ? <VideoList /> : <Navigate to="/login" />} />
         <Route path="/videos/:id" element={authUser ?<VideoDetail /> : <Navigate to={'/login'} />} />
+        <Route path="/videos/:id/edit" element={authUser ?<VideoEdit /> : <Navigate to={'/login'} />} />
+    
       </Routes>
       <Toaster />
     </div>

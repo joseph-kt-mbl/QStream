@@ -51,7 +51,7 @@ const useVideoStore = create((set) => ({
   },
   
   // Upload video
-  uploadVideo: async (videoData, token) => {
+  uploadVideo: async (videoData) => {
     set({ loading: true, error: null });
     try {
       const formData = new FormData();
@@ -59,12 +59,7 @@ const useVideoStore = create((set) => ({
       formData.append('description', videoData.description || '');
       formData.append('video', videoData.file);
       
-      const response = await axiosInstance.post(`/videos/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.post(`/videos/upload`, formData);
       
       set(state => ({ 
         videos: [response.data, ...state.videos],
@@ -83,46 +78,62 @@ const useVideoStore = create((set) => ({
   },
   
   // Update video
-  updateVideo: async (id, videoData, token) => {
-    set({ loading: true, error: null });
-    try {
-      const response = await axiosInstance.put(`/videos/${id}`, videoData, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+updateVideo: async (id, videoData) => {
+  set({ loading: true, error: null });
+  try {
+    // Create a plain object for the update
+    const updateData = {
+      title: videoData.title,
+      description: videoData.description || ''
+    };
+    
+    // If there's a thumbnail file, convert it to base64
+    if (videoData.thumbnailFile) {
+      // Convert file to base64
+      const base64Thumbnail = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(videoData.thumbnailFile);
       });
+
+      console.log('Base64 thumbnail:', base64Thumbnail);
       
-      set(state => ({
-        videos: state.videos.map(video => 
-          video.id === response.data.id ? response.data : video
-        ),
-        userVideos: state.userVideos.map(video => 
-          video.id === response.data.id ? response.data : video
-        ),
-        currentVideo: state.currentVideo?.id === response.data.id ? 
-          response.data : state.currentVideo,
-        loading: false
-      }));
-      
-      return response.data;
-    } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Failed to update video', 
-        loading: false 
-      });
-      throw error;
+      // Add the base64 thumbnail to the update data
+      updateData.thumbnailBase64 = base64Thumbnail;
+      updateData.thumbnailFilename = videoData.thumbnailFile.name;
     }
-  },
+    
+    // Send regular JSON request
+    const response = await axiosInstance.put(`/videos/${id}`, updateData);
+    
+    set(state => ({
+      videos: state.videos.map(video => 
+        video.id === response.data.id ? response.data : video
+      ),
+      userVideos: state.userVideos.map(video => 
+        video.id === response.data.id ? response.data : video
+      ),
+      currentVideo: state.currentVideo?.id === response.data.id ?
+        response.data : state.currentVideo,
+      loading: false
+    }));
+    
+    return response.data;
+  } catch (error) {
+    set({
+      error: error.response?.data?.message || 'Failed to update video',
+      loading: false
+    });
+    throw error;
+  }
+},
+
   
   // Delete video
-  deleteVideo: async (id, token) => {
+  deleteVideo: async (id) => {
     set({ loading: true, error: null });
     try {
-      await axiosInstance.delete(`/videos/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      await axiosInstance.delete(`/videos/${id}`);
       
       set(state => ({
         videos: state.videos.filter(video => video.id !== id),
