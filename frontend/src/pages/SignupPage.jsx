@@ -13,7 +13,7 @@ const SignupPage = () => {
     setShowPassword(!showPassword);
   };
   const validateForm = () => {
-    if(!formData.fullName.trim()) return toast.error("Full name is required !")
+    if(!formData.username.trim()) return toast.error("Full name is required !")
     if(!formData.email.trim()) return toast.error("Email is required !")
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) 
       return toast.error("Invalide email format !")
@@ -25,6 +25,7 @@ const SignupPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault()
     const success = validateForm();
+    console.log("\n\nsignup formData => ",formData)
     if(success === true){
       signup(formData)
     }
@@ -65,8 +66,8 @@ const SignupPage = () => {
                   className="input input-bordered w-full pl-10"
                   type="text"
                   placeholder="Your Name"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 />
               </div>
             </div>

@@ -5,6 +5,21 @@ export function formatMessageTime(date) {
       hour12: false,
     });
   }
-export function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+export  async function getVideoDuration(file) {
+    return new Promise((resolve, reject) => {
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        video.src = URL.createObjectURL(file);
+
+        video.onloadedmetadata = () => {
+            URL.revokeObjectURL(video.src); // Cleanup
+            resolve(video.duration);
+        };
+
+        video.onerror = () => {
+            URL.revokeObjectURL(video.src);
+            reject("Failed to get video duration");
+        };
+    });
 }
+

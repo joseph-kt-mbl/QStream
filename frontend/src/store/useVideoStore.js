@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { axiosInstance } from '../lib/axios';
+import { getVideoDuration } from '../lib/utils';
 
 const useVideoStore = create((set) => ({
   videos: [],
@@ -7,6 +8,7 @@ const useVideoStore = create((set) => ({
   currentVideo: null,
   loading: false,
   error: null,
+  watchedTimes: {},
   
   // Fetch all videos
   fetchVideos: async () => {
@@ -21,7 +23,27 @@ const useVideoStore = create((set) => ({
       });
     }
   },
-  
+  fetchWatchedTime: async (videoId) => {
+    try {
+      const response = await axiosInstance.get(`/videos/watched/${videoId}`);
+      set((state) => ({
+        watchedTimes: { ...state.watchedTimes, [videoId]: response.data.watchedTime },
+      }));
+    } catch (error) {
+      console.error('Error fetching watched time:', error);
+    }
+  },
+
+  saveWatchedTime: async (videoId, watchedTime) => {
+    try {
+      await axiosInstance.post(`/videos/watched`, { videoId, watchedTime });
+      set((state) => ({
+        watchedTimes: { ...state.watchedTimes, [videoId]: watchedTime },
+      }));
+    } catch (error) {
+      console.error('Error saving watched time:', error);
+    }
+  },
   // Fetch video by ID
   fetchVideoById: async (id) => {
     set({ loading: true, error: null });
@@ -51,31 +73,35 @@ const useVideoStore = create((set) => ({
   },
   
   // Upload video
-  uploadVideo: async (videoData) => {
+  uploadVideo:async (videoData) => {
     set({ loading: true, error: null });
+
     try {
-      const formData = new FormData();
-      formData.append('title', videoData.title);
-      formData.append('description', videoData.description || '');
-      formData.append('video', videoData.file);
-      
-      const response = await axiosInstance.post(`/videos/upload`, formData);
-      
-      set(state => ({ 
-        videos: [response.data, ...state.videos],
-        userVideos: [response.data, ...state.userVideos],
-        loading: false 
-      }));
-      
-      return response.data;
+        const duration = await getVideoDuration(videoData.file); // ⬅️ Get duration
+
+        const formData = new FormData();
+        formData.append('title', videoData.title);
+        formData.append('description', videoData.description || '');
+        formData.append('video', videoData.file);
+        formData.append('duration', duration); // ⬅️ Include duration
+
+        const response = await axiosInstance.post(`/videos/upload`, formData);
+
+        set(state => ({ 
+            videos: [response.data, ...state.videos],
+            userVideos: [response.data, ...state.userVideos],
+            loading: false 
+        }));
+
+        return response.data;
     } catch (error) {
-      set({ 
-        error: error.response?.data?.message || 'Failed to upload video', 
-        loading: false 
-      });
-      throw error;
+        set({ 
+            error: error.response?.data?.message || 'Failed to upload video', 
+            loading: false 
+        });
+        throw error;
     }
-  },
+},
   
   // Update video
 updateVideo: async (id, videoData) => {

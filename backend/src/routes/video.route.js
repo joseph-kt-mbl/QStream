@@ -1,6 +1,17 @@
 import { Router } from 'express';
 const router = Router();
-import { uploadVideo, getAllVideos, getVideoById, getUserVideos, updateVideo, deleteVideo,incrementViews } from '../controllers/video.controller.js';
+import {
+  uploadVideo,
+  getAllVideos, 
+  getVideoById, 
+  getUserVideos, 
+  updateVideo, 
+  deleteVideo,
+  incrementViews,
+  saveWatchedTime,
+  getWatchedTime
+} from '../controllers/video.controller.js';
+
 import {protectRoute as authMiddleware} from '../middleware/auth.middleware.js';
 import multer, { diskStorage } from 'multer';
 import path from 'path';
@@ -41,5 +52,7 @@ router.get('/:id', getVideoById);
 router.get('/user/:userId', getUserVideos);
 router.put('/:id', authMiddleware, updateVideo);
 router.delete('/:id', authMiddleware, deleteVideo);
+router.post('/watched', authMiddleware,saveWatchedTime);
+router.get('/watched/:videoId', authMiddleware,getWatchedTime);
 
 export default router;

@@ -1,80 +1,119 @@
+import { v4 as uuidv4 } from 'uuid';
 import prisma from '../lib/prisma.js';
+
 const _video = prisma.video;
+// console.log('\n\n\n\n\n\n\nn\===========\n\nvideo controller => ',  prisma.user);
+import { unlinkSync } from 'fs';
 import { v2 as cloudinary } from 'cloudinary';
-import { unlinkSync ,existsSync ,mkdirSync,writeFileSync} from 'fs';
-import path from 'path';
 
 
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Upload a video
+// Upload video function
 export async function uploadVideo(req, res) {
   try {
     console.log('Received request to upload video');
-    
-    const { title, description } = req.body;
-    console.log('Request body:', { title, description });
-    
+
+    const { title, description , duration } = req.body;
     const videoFile = req.file;
-    console.log('Uploaded file:', videoFile);
-    
+
     if (!videoFile) {
-      console.log('No video file uploaded');
       return res.status(400).json({ message: 'No video file uploaded!' });
     }
-    
-    // Upload the video to Cloudinary
+
     console.log('Uploading video to Cloudinary...');
     const uploadResult = await cloudinary.uploader.upload(videoFile.path, {
       resource_type: 'video',
       folder: 'video-stream-app',
     });
+
     console.log('Video uploaded:', uploadResult);
-    
-    // Generate a thumbnail from the video
+
+    // Generate a thumbnail using Cloudinary
     console.log('Generating thumbnail...');
-    const thumbnailResult = await cloudinary.uploader.upload(videoFile.path, {
+    const thumbnailUrl = cloudinary.url(uploadResult.public_id + '.jpg', {
       resource_type: 'video',
-      format: 'jpg',  // Convert to image
-      folder: 'video-stream-app-thumbnails',
-      transformation: [
-        { width: 300, height: 200, crop: "fill" },
-        { fetch_format: "auto" },
-        { quality: "auto" },
-        { start_offset: "auto" }  // This takes a frame from the video automatically
-      ]
+      transformation: [{ start_offset: "3", width: 300, crop: "scale" }],
     });
-    console.log('Thumbnail generated:', thumbnailResult);
-    
-    // Remove temporary file
-    console.log('Removing temporary file:', videoFile.path);
-    unlinkSync(videoFile.path);
-    console.log('Temporary file removed');
-    
-    // Create video in database
-    console.log('Saving video to database...');
-    const video = await _video.create({
+
+    console.log('Thumbnail generated:', thumbnailUrl);
+
+    // Clean up local video file
+   if (videoFile && videoFile.path) {
+    try {
+      unlinkSync(videoFile.path);
+      console.log('Temporary video file removed');
+    } catch (error) {
+      console.error('Error deleting video file:', error);
+    }
+  }
+
+    // Save video details to database
+    const video = await prisma.video.create({
       data: {
         title,
         description,
         filePath: uploadResult.secure_url,
-        thumbnailPath: thumbnailResult.secure_url,
-        userId: req.user.id
-      }
+        thumbnailPath: thumbnailUrl,
+        userId: req.user.id,
+        duration: parseFloat(duration),
+      },
     });
+
     console.log('Video saved:', video);
-    
     res.status(201).json(video);
   } catch (error) {
     console.error('Error uploading video:', error);
     res.status(500).json({ message: 'Error uploading video', error: error.message });
   }
 }
+export async function saveWatchedTime(req, res) {
+  try {
+    const { videoId, watchedTime } = req.body;
+    const userId = req.user.id;
+
+    const updatedWatch = await prisma.watchedVideo.upsert({
+      where: { userId_videoId: { userId, videoId } },
+      update: { watchedTime: Math.max(watchedTime, 0) },
+      create: { userId, videoId, watchedTime },
+    });
+
+    res.status(200).json(updatedWatch);
+  } catch (error) {
+    console.error('Error saving watched time:', error);
+    res.status(500).json({ message: 'Error saving watched time' });
+  }
+}
+
+export async function getWatchedTime(req, res) {
+  try {
+    const { videoId } = req.params;
+    const userId = req.user.id;
+
+    const watchedVideo = await prisma.watchedVideo.findUnique({
+      where: { userId_videoId: { userId, videoId: parseInt(videoId) } },
+    });
+
+    if (!watchedVideo) {
+      return res.status(200).json({ watchedTime: 0, message: "No watched time recorded" });
+    }
+
+    res.status(200).json({ watchedTime: watchedVideo.watchedTime });
+  } catch (error) {
+    console.error("Error fetching watched time:", error);
+    res.status(500).json({ message: "Error fetching watched time" });
+  }
+}
+
+
+
+
+
 
 
 
@@ -144,6 +183,7 @@ export async function getVideoById(req, res) {
     if (!video) {
       return res.status(404).json({ message: 'Video not found' });
     }
+    console.log(video)
 
     res.status(200).json(video);
   } catch (error) {
@@ -301,3 +341,4 @@ export async function deleteVideo(req, res) {
     res.status(500).json({ message: 'Error deleting video', error: error.message });
   }
 }
+

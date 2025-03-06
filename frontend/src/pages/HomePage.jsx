@@ -9,6 +9,7 @@ const HomePage = () => {
   const [featuredVideos, setFeaturedVideos] = useState([]);
   const [recentVideos, setRecentVideos] = useState([]);
   const [popularVideos, setPopularVideos] = useState([]);
+  console.log({videos})
 
   useEffect(() => {
     fetchVideos();

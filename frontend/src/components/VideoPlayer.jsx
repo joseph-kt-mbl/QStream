@@ -1,6 +1,5 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { Play, Pause, Volume2, VolumeX, Maximize, Minimize } from 'lucide-react';
-import { delay } from '../lib/utils';
 import useVideoStore from '../store/useVideoStore';
 
 const formatTime = (time) => {
@@ -10,7 +9,7 @@ const formatTime = (time) => {
 };
 
 const VideoPlayer = ({ video }) => {
-  const { incrementViews } = useVideoStore();
+  const { incrementViews, fetchWatchedTime, saveWatchedTime, watchedTimes } = useVideoStore();
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -20,6 +19,31 @@ const VideoPlayer = ({ video }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [viewIncremented, setViewIncremented] = useState(false);
+  
+  // Refs for debouncing
+  const saveTimeoutIdRef = useRef(null);
+  const lastSavedTimeRef = useRef(0);
+
+  useEffect(() => {
+    fetchWatchedTime(video.id);
+    
+    // Cleanup function to save time when component unmounts
+    return () => {
+      if (watchedTime > 0) {
+        saveWatchedTime(video.id, watchedTime);
+      }
+      // Clear any pending timeout
+      if (saveTimeoutIdRef.current) {
+        clearTimeout(saveTimeoutIdRef.current);
+      }
+    };
+  }, [video.id]);
+
+  useEffect(() => {
+    if (videoRef.current && watchedTimes[video.id] !== undefined) {
+      videoRef.current.currentTime = watchedTimes[video.id];
+    }
+  }, [watchedTimes, video.id]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -28,6 +52,28 @@ const VideoPlayer = ({ video }) => {
       });
     }
   }, []);
+
+  // Debounced save function
+  const debouncedSaveWatchedTime = useCallback((videoId, time) => {
+    // Clear any existing timeout
+    if (saveTimeoutIdRef.current) {
+      clearTimeout(saveTimeoutIdRef.current);
+    }
+    
+    // Only save if time has changed significantly (more than 5 seconds)
+    const timeDifference = Math.abs(time - lastSavedTimeRef.current);
+    if (timeDifference > 5) {
+      saveWatchedTime(videoId, time);
+      lastSavedTimeRef.current = time;
+      return;
+    }
+    
+    // Set a new timeout to save after delay
+    saveTimeoutIdRef.current = setTimeout(() => {
+      saveWatchedTime(videoId, time);
+      lastSavedTimeRef.current = time;
+    }, 3000); // Save after 3 seconds of no updates
+  }, [saveWatchedTime]);
 
   // Toggle play/pause
   const togglePlay = () => {
@@ -48,12 +94,23 @@ const VideoPlayer = ({ video }) => {
       const progressPercent = (currentTime / videoRef.current.duration) * 100;
       setProgress(progressPercent);
       setWatchedTime(currentTime);
+      
+      // Use debounced function instead of direct API call
+      debouncedSaveWatchedTime(video.id, currentTime);
 
       // Increment views if half of the video is watched
       if (!viewIncremented && currentTime >= videoRef.current.duration / 2) {
         incrementViews(video.id);
         setViewIncremented(true);
       }
+    }
+  };
+
+  // Also save on pause
+  const handlePause = () => {
+    if (videoRef.current) {
+      saveWatchedTime(video.id, videoRef.current.currentTime);
+      lastSavedTimeRef.current = videoRef.current.currentTime;
     }
   };
 
@@ -100,6 +157,7 @@ const VideoPlayer = ({ video }) => {
         src={video.filePath}
         className="w-full h-auto"
         onTimeUpdate={handleTimeUpdate}
+        onPause={handlePause}
         onClick={togglePlay}
       >
         Your browser does not support the video tag.

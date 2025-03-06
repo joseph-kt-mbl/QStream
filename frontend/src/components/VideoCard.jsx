@@ -1,125 +1,99 @@
-import PropTypes from 'prop-types';
+import { useMemo } from 'react';
+import useVideoStore from '../store/useVideoStore';
 import { Link } from 'react-router-dom';
+import PropTypes from 'prop-types';
 
 const VideoCard = ({ video, compact = false }) => {
-  // Format view count
-  const formatViews = (views) => {
-    if (views >= 1000000) {
-      return `${(views / 1000000).toFixed(1)}M`;
-    } else if (views >= 1000) {
-      return `${(views / 1000).toFixed(1)}K`;
-    }
-    return views;
-  };
+    const { watchedTimes, fetchWatchedTime } = useVideoStore();
 
-  // Format date to relative time (e.g. "2 days ago")
-  const getRelativeTime = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
-      if (diffHours === 0) {
-        const diffMinutes = Math.floor(diffTime / (1000 * 60));
-        return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-      }
-      return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-    } else if (diffDays < 7) {
-      return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-    } else if (diffDays < 30) {
-      const diffWeeks = Math.floor(diffDays / 7);
-      return `${diffWeeks} week${diffWeeks !== 1 ? 's' : ''} ago`;
-    } else if (diffDays < 365) {
-      const diffMonths = Math.floor(diffDays / 30);
-      return `${diffMonths} month${diffMonths !== 1 ? 's' : ''} ago`;
-    } else {
-      const diffYears = Math.floor(diffDays / 365);
-      return `${diffYears} year${diffYears !== 1 ? 's' : ''} ago`;
-    }
-  };
+    const watchedPercentage = useMemo(() => {
+        console.log("Calculating watched percentage...");
+        console.log("Duration:", video.duration, "watchedTime:", watchedTimes[video.id]);
 
-  if (compact) {
+        if (!video.duration || video.duration === 0) return 0;
+        
+        const watchedTime = watchedTimes[video.id] || 0;
+        const percentage = (watchedTime / video.duration) * 100;
+        return Math.min(percentage, 100);
+    }, [video.duration, watchedTimes[video.id]]);
+
+    const getWatchStatusLabel = () => {
+        if (watchedPercentage >= 95) return "Watched";
+        if (watchedPercentage > 0) return "In progress";
+        return null;
+    };
+
     return (
-      <Link to={`/videos/${video.id}`} className="block group">
-        <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden relative mb-2">
-          {video.thumbnailPath ? (
-            <img 
-              src={video.thumbnailPath} 
-              alt={video.title}
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-800 text-white">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          )}
-          <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-            {formatViews(video.views)} views
-          </div>
-        </div>
-        <h3 className="text-sm font-medium truncate">{video.title}</h3>
-        <p className="text-xs text-gray-500">{getRelativeTime(video.createdAt)}</p>
-      </Link>
-    );
-  }
+        <Link to={`/videos/${video.id}`} className="block group">
+            <div className="relative aspect-video bg-gray-200 rounded-lg overflow-hidden mb-3">
+                {video.thumbnailPath ? (
+                    <img 
+                        src={video.thumbnailPath} 
+                        alt={video.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-800 text-white">
+                        <video src={video.filePath} className="hidden" preload="metadata" />
+                    </div>
+                )}
+                
+                {/* Watched progress bar */}
+                {watchedPercentage > 0 && (
+                    <div className="absolute bottom-0 left-0 h-1 bg-blue-500" style={{ width: `${watchedPercentage}%` }}></div>
+                )}
+                
+                {/* Watched indicator */}
+                {getWatchStatusLabel() && (
+                    <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                        {getWatchStatusLabel()}
+                    </div>
+                )}
 
-  return (
-    <Link to={`/videos/${video.id}`} className="block group">
-      <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden relative mb-3">
-        {video.thumbnailPath ? (
-          <img 
-            src={video.thumbnailPath} 
-            alt={video.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gray-800 text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        )}
-        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-          {formatViews(video.views)} views
-        </div>
-      </div>
-      <h3 className="text-lg font-medium mb-1 line-clamp-2">{video.title}</h3>
-      <div className="flex items-center text-sm text-gray-500 mb-2">
-        <span className="font-medium">{video.user.username}</span>
-        <span className="mx-1">•</span>
-        <span>{getRelativeTime(video.createdAt)}</span>
-      </div>
-      {video.description && (
-        <p className="text-sm text-gray-600 line-clamp-2">{video.description}</p>
-      )}
-    </Link>
-  );
+                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    {video.views} views
+                </div>
+            </div>
+
+            <div className="flex justify-between items-start">
+                <div className="flex-1">
+                    <h3 className="text-lg font-medium mb-1 line-clamp-2">{video.title}</h3>
+                    <div className="flex items-center text-sm text-gray-500 mb-2">
+                        <span className="font-medium">{video?.user?.username}</span>
+                        <span className="mx-1">•</span>
+                        <span>{new Date(video.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    {!compact && video.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2">{video.description}</p>
+                    )}
+                </div>
+
+                {/* Video duration display */}
+                <div className="text-xs text-gray-500">
+                    {Math.floor(video.duration / 60)}:{String(Math.floor(video.duration % 60)).padStart(2, '0')} min
+                </div>
+            </div>
+        </Link>
+    );
 };
 
-
-// Define PropTypes
 VideoCard.propTypes = {
-  video: PropTypes.shape({
-    id: PropTypes.number.isRequired,
-    title: PropTypes.string.isRequired,
-    description: PropTypes.string,
-    filePath: PropTypes.string.isRequired,
-    thumbnailPath: PropTypes.string,
-    views: PropTypes.number.isRequired,
-    userId: PropTypes.number.isRequired,
-    user: PropTypes.shape({
-      id: PropTypes.number.isRequired,
-      username: PropTypes.string.isRequired,
+    video: PropTypes.shape({
+        id: PropTypes.number.isRequired,
+        title: PropTypes.string.isRequired,
+        description: PropTypes.string,
+        filePath: PropTypes.string.isRequired,
+        thumbnailPath: PropTypes.string,
+        views: PropTypes.number.isRequired,
+        userId: PropTypes.number,
+        duration: PropTypes.number, // Now we support duration from DB
+        user: PropTypes.shape({
+            id: PropTypes.number,
+            username: PropTypes.string,
+        }),
+        createdAt: PropTypes.string.isRequired,
     }).isRequired,
-    createdAt: PropTypes.string.isRequired,
-  }).isRequired,
-  compact: PropTypes.bool,
+    compact: PropTypes.bool,
 };
 
 export default VideoCard;
