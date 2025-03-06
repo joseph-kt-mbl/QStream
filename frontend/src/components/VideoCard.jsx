@@ -1,4 +1,4 @@
-import React from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 
 const VideoCard = ({ video, compact = false }) => {
@@ -100,6 +100,26 @@ const VideoCard = ({ video, compact = false }) => {
       )}
     </Link>
   );
+};
+
+
+// Define PropTypes
+VideoCard.propTypes = {
+  video: PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    title: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    filePath: PropTypes.string.isRequired,
+    thumbnailPath: PropTypes.string,
+    views: PropTypes.number.isRequired,
+    userId: PropTypes.number.isRequired,
+    user: PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      username: PropTypes.string.isRequired,
+    }).isRequired,
+    createdAt: PropTypes.string.isRequired,
+  }).isRequired,
+  compact: PropTypes.bool,
 };
 
 export default VideoCard;

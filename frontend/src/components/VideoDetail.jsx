@@ -16,7 +16,7 @@ const VideoDetail = () => {
     fetchVideos, 
     deleteVideo 
   } = useVideoStore();
-  const { authUser, isAuthenticated } = useAuthStore();
+  const { authUser} = useAuthStore();
   const [relatedVideos, setRelatedVideos] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 

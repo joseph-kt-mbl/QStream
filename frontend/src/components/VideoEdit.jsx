@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { X, Upload, Save } from 'lucide-react';
 import useVideoStore from '../store/useVideoStore';
-import {useAuthStore} from '../store/useAuthStore';
+
 
 const VideoEdit = () => {
   const { id } = useParams();
@@ -13,7 +13,6 @@ const VideoEdit = () => {
     loading, 
     error 
   } = useVideoStore();
-  const { user } = useAuthStore();
 
   // Form state
   const [title, setTitle] = useState('');
